@@ -1,7 +1,8 @@
 const UserJob = require("../models/UserJob");
 const Job = require("../models/Job");
+const Resume = require("../models/Resume");
 
-// GET /api/jobs/my - Get all jobs for the logged-in user (optionally filtered by resumeId)
+// GET /api/jobs/my - Get all jobs for the logged-in user (grouped by session)
 const getMyJobs = async (req, res, next) => {
   try {
     const { resumeId } = req.query;
@@ -10,22 +11,42 @@ const getMyJobs = async (req, res, next) => {
 
     const userJobs = await UserJob.find(filter)
       .populate("jobId")
+      .populate("resumeId", "originalName createdAt")
       .sort({ createdAt: -1 });
 
-    // Flatten into a list of jobs with match info
-    const jobs = userJobs
-      .filter((uj) => uj.jobId) // skip if job was deleted
-      .map((uj) => ({
+    const sessionsMap = {};
+    let totalJobs = 0;
+
+    userJobs.forEach((uj) => {
+      if (!uj.jobId || !uj.resumeId) return;
+
+      const rId = uj.resumeId._id.toString();
+      if (!sessionsMap[rId]) {
+        sessionsMap[rId] = {
+          resumeId: rId,
+          resumeName: uj.resumeId.originalName || "Resume",
+          uploadedAt: uj.resumeId.createdAt,
+          jobs: [],
+        };
+      }
+
+      sessionsMap[rId].jobs.push({
         userJobId: uj._id,
-        resumeId: uj.resumeId,
+        resumeId: rId,
         matchScore: uj.matchScore,
         matchedSkills: uj.matchedSkills,
         isSaved: uj.isSaved,
         isApplied: uj.isApplied,
         ...uj.jobId.toObject(),
-      }));
+      });
+      totalJobs++;
+    });
 
-    res.json(jobs);
+    const sessions = Object.values(sessionsMap).sort(
+      (a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)
+    );
+
+    res.json({ sessions, total: totalJobs });
   } catch (err) {
     next(err);
   }
