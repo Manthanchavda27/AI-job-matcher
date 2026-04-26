@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const ActivityLog = require("../models/ActivityLog");
 const { protect } = require("../middleware/authMiddleware");
+const passport = require("passport");
 
 const router = express.Router();
 
@@ -64,6 +65,22 @@ router.post("/register", async (req, res, next) => {
     next(err);
   }
 });
+
+// GOOGLE OAUTH
+router.get("/google", passport.authenticate("google", { scope: ["profile", "email"], session: false }));
+
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { session: false, failureRedirect: `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=auth_failed` }),
+  (req, res) => {
+    const token = jwt.sign(
+      { id: req.user._id, role: req.user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+    res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/login?token=${token}`);
+  }
+);
 
 // LOGIN
 router.post("/login", async (req, res, next) => {

@@ -174,6 +174,24 @@ export default function Register() {
             Create Account →
           </button>
 
+          {/* Divider */}
+          <div className="flex items-center my-4">
+            <div className="flex-grow border-t border-gray-300"></div>
+            <span className="px-3 text-gray-500 text-sm">OR</span>
+            <div className="flex-grow border-t border-gray-300"></div>
+          </div>
+
+          {/* Google Login Button */}
+          <button
+            onClick={() => {
+              window.location.href = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/google`;
+            }}
+            className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 py-2 rounded hover:bg-gray-50 transition font-medium"
+          >
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google" className="w-5 h-5" />
+            Continue with Google
+          </button>
+
           <p className="text-sm text-center mt-4">
             Already have an account?{" "}
             <Link to="/login" className="text-blue-600 font-semibold">

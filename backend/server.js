@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
+const passport = require("./config/passport");
 
 // Route files
 const userRoutes = require("./routes/userRoutes");
@@ -44,6 +45,9 @@ app.use(
 
 // Body parser
 app.use(express.json());
+
+// Passport middleware
+app.use(passport.initialize());
 
 // API routes
 app.use("/api/users", userRoutes);

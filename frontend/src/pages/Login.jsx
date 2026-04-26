@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 import api from "../api/axios";
 
 
@@ -8,9 +8,42 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const [searchParams] = useSearchParams();
+  const tokenParams = searchParams.get("token");
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (tokenParams) {
+      handleGoogleLoginSuccess(tokenParams);
+    }
+  }, [tokenParams]);
+
+  const handleGoogleLoginSuccess = async (token) => {
+    try {
+      setLoading(true);
+      const response = await api.get("/api/users/profile", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = response.data;
+      
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("userName", data.name);
+      localStorage.setItem("userEmail", data.email);
+      localStorage.setItem("userId", data._id);
+      localStorage.setItem("token", token);
+
+      if (data.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      setError("Failed to verify Google login");
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     setError("");
@@ -145,6 +178,25 @@ export default function Login() {
           >
             {loading ? "Logging in..." : "Login"}
 
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center my-4">
+            <div className="flex-grow border-t border-gray-300"></div>
+            <span className="px-3 text-gray-500 text-sm">OR</span>
+            <div className="flex-grow border-t border-gray-300"></div>
+          </div>
+
+          {/* Google Login Button */}
+          <button
+            onClick={() => {
+              window.location.href = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/google`;
+            }}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 py-2 rounded hover:bg-gray-50 transition font-medium disabled:opacity-60"
+          >
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google" className="w-5 h-5" />
+            Continue with Google
           </button>
 
           {/* Register */}
