@@ -14,4 +14,4 @@ pdfminer.six
 requests
 python-dotenv
 gunicorn
-# Note: en_core_web_sm will be handled via start command
+python-docx
