@@ -9,7 +9,7 @@ from resume_scorer import score_resume
 
 app = FastAPI()
 
-UPLOAD_DIR = "../backend/uploads"
+UPLOAD_DIR = os.path.join(os.getcwd(), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
