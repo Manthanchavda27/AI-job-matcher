@@ -3,7 +3,7 @@ from pydantic import BaseModel  # ✅ THIS WAS MISSING
 import os
 import uuid
 
-from parser import parse_resume
+from resume_parser import parse_resume
 from recommender import get_recommendations
 from resume_scorer import score_resume
 
