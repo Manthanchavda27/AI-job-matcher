@@ -22,6 +22,7 @@ const uploadResume = async (req, res, next) => {
     });
 
     const aiServiceUrl = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
+    console.log(`[AI SERVICE INFO] Calling AI backend at: ${aiServiceUrl}/parse`);
 
     const response = await axios.post(
       `${aiServiceUrl}/parse`,

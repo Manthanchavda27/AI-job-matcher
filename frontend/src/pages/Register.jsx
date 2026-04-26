@@ -11,7 +11,8 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "",
+    confirmPassword: "",
+    // role is automatically 'student'
   });
 
   const [error, setError] = useState("");
@@ -27,7 +28,7 @@ export default function Register() {
     setSuccess("");
 
 
-    if (!form.name || !form.email || !form.password || !form.role) {
+    if (!form.name || !form.email || !form.password) {
       setError("Please fill in all fields");
       return;
     }
@@ -59,7 +60,7 @@ export default function Register() {
         name: form.name,
         email: form.email,
         password: form.password,
-        role: form.role,
+        role: "student",
       });
 
       setSuccess("Registration successful! Please login.");
@@ -148,16 +149,8 @@ export default function Register() {
             className="w-full border rounded px-3 py-2 mt-1 mb-3"
           />
 
-          <label className="text-sm font-medium">Select Role</label>
-          <select
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2 mt-1 mb-3"
-          >
-            <option value="">Select your role</option>
-            <option value="student">Student</option>
-          </select>
+          {/* Role selection removed - Defaults to student in API call */}
+
 
           {error && (
             <p className="text-red-600 text-sm mb-2">{error}</p>

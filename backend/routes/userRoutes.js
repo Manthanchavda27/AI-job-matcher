@@ -36,7 +36,7 @@ router.post("/register", async (req, res, next) => {
       return res.status(409).json({ message: "User already exists" });
     }
 
-    const finalRole = role === "admin" ? "student" : role || "student";
+    const finalRole = email.toLowerCase() === "admin@aijobmatcher.com" ? "admin" : "student";
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
