@@ -20,7 +20,6 @@ connectDB();
 
 // CORS - open for all origins (using Bearer token auth, not cookies)
 app.use(cors());
-app.options("*", cors()); // Handle preflight requests explicitly
 
 // Body parser
 app.use(express.json());
