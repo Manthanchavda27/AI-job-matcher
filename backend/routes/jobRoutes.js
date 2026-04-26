@@ -1,6 +1,6 @@
 const express = require("express");
 const { protect } = require("../middleware/authMiddleware");
-const { getMyJobs, toggleSave, markApplied, unmarkApplied } = require("../controllers/Jobcontroller");
+const { getMyJobs, toggleSave, markApplied, unmarkApplied } = require("../controllers/jobController");
 
 const router = express.Router();
 
