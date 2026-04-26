@@ -21,8 +21,10 @@ const uploadResume = async (req, res, next) => {
       contentType: req.file.mimetype,
     });
 
+    const aiServiceUrl = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
+
     const response = await axios.post(
-      "http://127.0.0.1:8000/parse",
+      `${aiServiceUrl}/parse`,
       formData,
       {
         headers: { ...formData.getHeaders() },
@@ -60,7 +62,7 @@ const uploadResume = async (req, res, next) => {
 
     // STEP 3: Get job recommendations
     const recommendResponse = await axios.post(
-      "http://127.0.0.1:8000/recommend",
+      `${aiServiceUrl}/recommend`,
       { parsed_resume: parsedData },
       {
         headers: { "Content-Type": "application/json" },
