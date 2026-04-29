@@ -125,6 +125,7 @@ export default function UploadResume() {
   const [topJobs, setTopJobs] = useState([]);     // top 5 jobs
   const [totalSaved, setTotalSaved] = useState(0);
   const [resumeId, setResumeId] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState("");
 
   useEffect(() => {
     const savedResult = sessionStorage.getItem("latestUploadResult");
@@ -136,6 +137,7 @@ export default function UploadResume() {
         setSkillSuggestions(data.skillSuggestions);
         setTopJobs(data.topJobs);
         setTotalSaved(data.totalSaved);
+        if (data.uploadedFileName) setUploadedFileName(data.uploadedFileName);
       } catch (e) {
         console.error("Failed to parse saved upload result", e);
       }
@@ -188,8 +190,11 @@ export default function UploadResume() {
         resumeScore: data.resumeScore || null,
         skillSuggestions: data.skillSuggestions || null,
         topJobs: data.topJobs || [],
-        totalSaved: data.totalSaved || 0
+        totalSaved: data.totalSaved || 0,
+        uploadedFileName: selectedFile.name
       }));
+
+      setUploadedFileName(selectedFile.name);
 
       if (saved) {
         alert("Job recommendations saved to history!");
@@ -237,6 +242,11 @@ export default function UploadResume() {
             {selectedFile && (
               <p className="text-sm text-gray-600 mt-2">
                 Selected: {selectedFile.name}
+              </p>
+            )}
+            {!selectedFile && uploadedFileName && (
+              <p className="text-sm text-green-600 mt-2 font-medium">
+                Last Uploaded: {uploadedFileName}
               </p>
             )}
 
