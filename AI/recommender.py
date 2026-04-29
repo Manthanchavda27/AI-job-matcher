@@ -562,28 +562,65 @@ def get_recommendations(parsed_resume: dict) -> dict:
     if not raw_jobs:
         # if API key is missing/invalid, fallback to synthetic job list
         if not THEIRSTACK_KEY:
-            real_companies = ["Google", "Amazon", "Microsoft", "Apple", "Meta", "Netflix", "IBM", "Intel", "Oracle", "Cisco", "Salesforce", "Adobe", "Nvidia", "Tesla", "Uber"]
-            raw_jobs = []
-            for i in range(15):
-                comp = real_companies[i % len(real_companies)]
-                raw_jobs.append(
-                    {
-                        "id": f"fallback-{i}",
-                        "job_title": f"{predicted_role}",
-                        "company": comp,
-                        "location": "Remote",
-                        "short_location": "Remote",
-                        "country": "Global",
-                        "url": f"https://www.linkedin.com/jobs/search/?keywords={predicted_role.replace(' ', '%20')}%20{comp}",
-                        "technology_slugs": parsed_resume.get("skills", []),
-                        "keyword_slugs": parsed_resume.get("skills", []),
-                        "description": f"This is a dynamically generated job recommendation. Click the link to search for real {predicted_role} roles at {comp} on LinkedIn.",
-                        "seniority": "Mid",
-                        "remote": True,
-                        "hybrid": False,
-                        "salary_string": "$120,000",
-                    }
-                )
+            try:
+                import pandas as pd
+                dataset_path = os.path.join(os.path.dirname(__file__), "sample_jobs.csv")
+                df = pd.read_csv(dataset_path)
+                
+                # Simple heuristic search in Role or Job Title
+                df_filtered = df[df['Role'].str.contains(predicted_role, case=False, na=False) | df['Job Title'].str.contains(predicted_role, case=False, na=False)]
+                
+                # If no direct matches, just sample random jobs or fallback
+                if df_filtered.empty:
+                    df_filtered = df.sample(min(15, len(df)))
+                else:
+                    df_filtered = df_filtered.sample(min(15, len(df_filtered)))
+                
+                raw_jobs = []
+                for _, row in df_filtered.iterrows():
+                    comp = str(row.get('Company', 'Tech Company'))
+                    job_title = str(row.get('Job Title', predicted_role))
+                    skills = [s.strip() for s in str(row.get('skills', '')).split(',')]
+                    raw_jobs.append(
+                        {
+                            "id": str(row.get('Job Id', f"fallback-{len(raw_jobs)}")),
+                            "job_title": job_title,
+                            "company": comp,
+                            "location": str(row.get('location', 'Remote')),
+                            "short_location": str(row.get('location', 'Remote')),
+                            "country": str(row.get('Country', 'Global')),
+                            "url": f"https://www.linkedin.com/jobs/search/?keywords={job_title.replace(' ', '%20')}%20{comp.replace(' ', '%20')}",
+                            "technology_slugs": skills,
+                            "keyword_slugs": skills,
+                            "description": str(row.get('Job Description', 'This is a dynamically recommended job from our dataset.')),
+                            "seniority": "Mid",
+                            "remote": False,
+                            "hybrid": False,
+                            "salary_string": str(row.get('Salary Range', '$80,000')),
+                        }
+                    )
+            except Exception as e:
+                print(f"Dataset fallback failed: {e}")
+                raw_jobs = []
+                for i in range(15):
+                    raw_jobs.append(
+                        {
+                            "id": f"fallback-{i}",
+                            "job_title": f"{predicted_role}",
+                            "company": "Decent Company",
+                            "location": "Remote",
+                            "short_location": "Remote",
+                            "country": "Global",
+                            "url": f"https://www.linkedin.com/jobs/search/?keywords={predicted_role.replace(' ', '%20')}",
+                            "technology_slugs": parsed_resume.get("skills", []),
+                            "keyword_slugs": parsed_resume.get("skills", []),
+                            "description": "This is a fallback job.",
+                            "seniority": "Mid",
+                            "remote": True,
+                            "hybrid": False,
+                            "salary_string": "$60,000",
+                        }
+                    )
         else:
             return {
                 "predicted_role": predicted_role,
