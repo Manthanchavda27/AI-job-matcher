@@ -227,6 +227,16 @@ def get_skill_suggestions(missing_skills, predicted_role, resume_skills):
             ordered_candidates.append((skill, "medium"))
 
     learn_next = []
+    
+    # If jobs didn't provide missing skills (e.g., dummy jobs), fallback to suggesting core/advanced skills not in resume
+    if not ordered_candidates:
+        for skill in core + advanced + tools:
+            if len(ordered_candidates) >= 5:
+                break
+            if _normalize_skill(skill) not in resume_lower:
+                priority = "high" if skill in core else "medium"
+                ordered_candidates.append((skill, priority))
+
     for skill, priority in ordered_candidates[:5]:
         resource = _find_resource(skill)
         reason = (
