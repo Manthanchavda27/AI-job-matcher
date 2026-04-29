@@ -122,6 +122,7 @@ export default function Navbar() {
                     onClick={async () => {
                       try { await api.post("/api/users/logout"); } catch {}
                       localStorage.clear();
+                      sessionStorage.clear(); // Clear upload resume state
 
                       setIsLoggedIn(false);
                       setShowMenu(false);
