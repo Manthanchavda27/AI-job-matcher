@@ -1,6 +1,5 @@
 import re
 import spacy
-
 nlp = spacy.load("en_core_web_sm")
 
 # ─── SKILLS LIBRARY ────────────────────────────────────────────────────────────
@@ -35,31 +34,50 @@ SKILLS_DB = {
 }
 
 # ─── NAME EXTRACTION ───────────────────────────────────────────────────────────
+
+# Add common false positives
+BLACKLIST = {
+    "java", "python", "html", "css", "javascript",
+    "react", "node", "sql", "mongodb"
+}
+
+def is_valid_name(name: str) -> bool:
+    words = name.strip().split()
+
+    # Rule 1: Must be 2–4 words
+    if not (2 <= len(words) <= 4):
+        return False
+
+    # Rule 2: No digits or symbols
+    if re.search(r"[\d@|•\-/]", name):
+        return False
+
+    # Rule 3: Not a tech keyword
+    if name.lower() in BLACKLIST:
+        return False
+
+    # Rule 4: Each word starts with uppercase
+    if not all(w[0].isupper() for w in words if w):
+        return False
+
+    return True
+
+
 def extract_name(text: str) -> str:
-    """
-    Strategy:
-    1. Try spaCy PERSON entity from first 10 lines (most resumes have name on top)
-    2. Fallback: first non-empty line that looks like a name (2-4 words, no digits)
-    """
     first_chunk = "\n".join(text.strip().splitlines()[:10])
     doc = nlp(first_chunk)
 
+    # Step 1: Try NER
     for ent in doc.ents:
         if ent.label_ == "PERSON":
             name = ent.text.strip()
-            # Reject if it contains digits or is too short
-            if not re.search(r"\d", name) and len(name.split()) >= 1:
+            if is_valid_name(name):
                 return name
 
-    # Fallback: first line that looks like a real name
+    # Step 2: Fallback
     for line in text.strip().splitlines():
         line = line.strip()
-        words = line.split()
-        if (
-            2 <= len(words) <= 4
-            and not re.search(r"[\d@|•\-/]", line)
-            and line[0].isupper()
-        ):
+        if is_valid_name(line):
             return line
 
     return "Not Found"
@@ -168,29 +186,6 @@ def extract_years_experience(text: str) -> int:
 
     return 0  # default: treat as fresher if unknown
 
-
-# ─── EDUCATION ─────────────────────────────────────────────────────────────────
-# def extract_education(text: str) -> list:
-#     degrees = [
-#         "b.tech", "m.tech", "btech", "mtech", "b.e", "m.e",
-#         "bachelor", "master", "phd", "ph.d", "mba", "bsc", "msc",
-#         "b.sc", "m.sc", "be", "me", "diploma", "10th", "12th",
-#         "hsc", "ssc", "intermediate", "matriculation"
-#     ]
-
-#     text_lower = text.lower()
-#     found = []
-
-#     lines = text.splitlines()
-#     for line in lines:
-#         line_lower = line.lower()
-#         if any(deg in line_lower for deg in degrees):
-#             found.append(deg)
-#             # clean = line.strip()
-#             # if clean and clean not in found:
-            
-
-#     return found[:5]  # return max 5 education entries
 def extract_education(text: str) -> list:
     degrees = [
         "b.tech", "m.tech", "btech", "mtech", "b.e", "m.e",

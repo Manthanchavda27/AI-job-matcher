@@ -14,16 +14,14 @@ export default function AdminDashboard() {
 
   const loadAll = async () => {
     try {
-      const [statsRes, usersRes, jobsRes, resumesRes, activityRes] = await Promise.all([
+      const [statsRes, usersRes, resumesRes, activityRes] = await Promise.all([
         api.get("/api/admin/stats"),
         api.get("/api/admin/users"),
-        api.get("/api/jobs"),
         api.get("/api/admin/resumes"),
         api.get("/api/admin/activity"),
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data || []);
-      setJobs(jobsRes.data || []);
       setResumes(resumesRes.data || []);
       setActivityLogs(activityRes.data || []);
     } catch (err) {
@@ -35,34 +33,7 @@ export default function AdminDashboard() {
     loadAll();
   }, []);
 
-  const postJob = async () => {
-    setFormError("");
-    setFormSuccess("");
-    if (!jobForm.title || !jobForm.company) {
-      setFormError("Job title and company are required");
-      return;
-    }
-    try {
-      await api.post("/api/jobs", {
-        ...jobForm,
-        skills: jobForm.skills.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-      setFormSuccess("Job posted successfully");
-      setJobForm({ title: "", company: "", location: "", type: "", salary: "", skills: "" });
-      await loadAll();
-    } catch (err) {
-      setFormError(err.response?.data?.message || "Failed to post job");
-    }
-  };
 
-  const deleteJob = async (id) => {
-    try {
-      await api.delete(`/api/jobs/${id}`);
-      await loadAll();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete job");
-    }
-  };
 
   const toggleUserStatus = async (id) => {
     try {
@@ -97,51 +68,7 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* JOB MANAGEMENT */}
 
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">💼 Job Management</h2>
-
-          <div className="bg-white p-6 rounded-xl shadow mb-6">
-            <div className="grid grid-cols-2 gap-4">
-              {["title", "company", "location", "type", "salary", "skills"].map((field) => (
-                <input
-                  key={field}
-                  placeholder={field.toUpperCase()}
-                  value={jobForm[field]}
-                  onChange={(e) => setJobForm({ ...jobForm, [field]: e.target.value })}
-                  className="border px-3 py-2 rounded"
-                />
-              ))}
-            </div>
-
-            {formError && <p className="text-red-600 text-sm mt-2">{formError}</p>}
-            {formSuccess && <p className="text-green-600 text-sm mt-2">{formSuccess}</p>}
-
-
-            <button
-              onClick={postJob}
-              className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-            >
-              Post Job
-            </button>
-          </div>
-
-          {jobs.map((job) => (
-            <div key={job._id} className="bg-white p-4 rounded-lg shadow mb-3 flex justify-between">
-              <div>
-                <p className="font-semibold">{job.title}</p>
-                <p className="text-sm text-gray-500">{job.company} • {job.location}</p>
-              </div>
-              <button onClick={() => deleteJob(job._id)} className="text-red-600 text-sm">
-
-                Delete
-              </button>
-            </div>
-          ))}
-
-          {jobs.length === 0 && <p className="text-gray-500 text-sm">No jobs posted yet.</p>}
-        </section>
 
         {/* USER MANAGEMENT */}
         <section className="mb-12">
@@ -236,7 +163,6 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
-        I
       </main>
     </div>
   );

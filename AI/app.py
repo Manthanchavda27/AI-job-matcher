@@ -3,13 +3,13 @@ from pydantic import BaseModel  # ✅ THIS WAS MISSING
 import os
 import uuid
 
-from resume_parser import parse_resume
+from parser import parse_resume
 from recommender import get_recommendations
 from resume_scorer import score_resume
 
 app = FastAPI()
 
-UPLOAD_DIR = os.path.join(os.getcwd(), "uploads")
+UPLOAD_DIR = "../backend/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 

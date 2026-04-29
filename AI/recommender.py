@@ -204,8 +204,9 @@ def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str 
         try:
             payload = {
                 "job_title_or":           [title],
+                "job_location_pattern_or": ["Ahmedabad", "Surat"],
                 "posted_at_max_age_days":  30,
-                "limit":                   limit_per_title,
+                "limit": limit_per_title,
             }
 
             if seniority_filter:
