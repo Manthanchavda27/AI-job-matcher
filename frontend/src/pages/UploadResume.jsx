@@ -1,6 +1,6 @@
 import Navbar from "../components/Navbar";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../api/axios";
 import { saveJobHistory } from "../utils/jobHistory";
 
@@ -126,6 +126,22 @@ export default function UploadResume() {
   const [totalSaved, setTotalSaved] = useState(0);
   const [resumeId, setResumeId] = useState(null);
 
+  useEffect(() => {
+    const savedResult = sessionStorage.getItem("latestUploadResult");
+    if (savedResult) {
+      try {
+        const data = JSON.parse(savedResult);
+        setAiResult(data.aiResult);
+        setResumeScore(data.resumeScore);
+        setSkillSuggestions(data.skillSuggestions);
+        setTopJobs(data.topJobs);
+        setTotalSaved(data.totalSaved);
+      } catch (e) {
+        console.error("Failed to parse saved upload result", e);
+      }
+    }
+  }, []);
+
   const handleUpload = async () => {
     if (!selectedFile) {
       alert("Please select a resume file");
@@ -165,6 +181,16 @@ export default function UploadResume() {
       // Save to job history
       const resumeSnippet = `Skills: ${(data.parsedData?.skills || []).join(', ')} | Education: ${(data.parsedData?.education || []).join(', ')}`;
       const saved = saveJobHistory(data.topJobs || [], resumeSnippet);
+
+      // Save to session storage so it persists when navigating back
+      sessionStorage.setItem("latestUploadResult", JSON.stringify({
+        aiResult: data.parsedData,
+        resumeScore: data.resumeScore || null,
+        skillSuggestions: data.skillSuggestions || null,
+        topJobs: data.topJobs || [],
+        totalSaved: data.totalSaved || 0
+      }));
+
       if (saved) {
         alert("Job recommendations saved to history!");
       }
