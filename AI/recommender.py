@@ -200,7 +200,9 @@ def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str 
         else:
             seniority_filter = ["senior", "staff", "c_level"]
 
-    for title in search_titles:
+    import concurrent.futures
+
+    def _fetch_single_title(title):
         try:
             payload = {
                 "job_title_or":           [title],
@@ -218,15 +220,22 @@ def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str 
                 THEIRSTACK_URL,
                 headers=headers,
                 json=payload,
-                timeout=15
+                timeout=8
             )
 
             if response.status_code != 200:
                 print(f"TheirStack error for '{title}': {response.status_code} {response.text[:500]}")
-                continue
+                return title, []
 
-            jobs = response.json().get("data", [])
+            return title, response.json().get("data", [])
+        except Exception as e:
+            print(f"Fetch error for '{title}': {e}")
+            return title, []
 
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {executor.submit(_fetch_single_title, t): t for t in search_titles}
+        for future in concurrent.futures.as_completed(futures):
+            title, jobs = future.result()
             for job in jobs:
                 job_id    = job.get("id")
                 title_key = f"{job.get('job_title', '')}_{job.get('company', '')}"
@@ -237,10 +246,6 @@ def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str 
                     all_jobs.append(job)
 
             print(f"Title '{title}' → {len(jobs)} jobs fetched")
-
-        except Exception as e:
-            print(f"Fetch error for '{title}': {e}")
-            continue
 
     print(f"Total unique jobs: {len(all_jobs)}")
     return all_jobs
