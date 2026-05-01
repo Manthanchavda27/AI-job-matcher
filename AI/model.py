@@ -212,53 +212,72 @@ def train_model():
     return model, vectorizer
 
 
-# ─── LOAD SAVED MODEL ──────────────────────────────────────────────────────────
+# ─── PREDICT JOB ROLE (ROBUST HEURISTIC SCORER) ────────────────────────────────
+ROLE_KEYWORDS = {
+    "AI/ML Engineer": ["machine learning", "deep learning", "nlp", "computer vision", "tensorflow", "pytorch", "keras", "scikit-learn", "ai", "artificial intelligence", "neural networks"],
+    "Data Analyst/Engineer": ["data analyst", "data engineer", "sql", "pandas", "numpy", "tableau", "power bi", "excel", "big data", "etl", "data visualization", "matplotlib", "seaborn", "data science"],
+    "Frontend Developer": ["frontend", "front end", "react", "angular", "vue", "html", "css", "javascript", "typescript", "ui developer", "tailwind", "bootstrap"],
+    "Backend Developer": ["backend", "back end", "node", "express", "django", "flask", "spring boot", "java", "python", "api", "c#", ".net", "ruby on rails", "php", "laravel", "go", "golang"],
+    "Full Stack Developer": ["full stack", "fullstack", "mern", "mean", "lamp", "web developer"],
+    "DevOps/Cloud Engineer": ["devops", "cloud", "aws", "azure", "gcp", "docker", "kubernetes", "jenkins", "ci/cd", "terraform", "ansible", "linux"],
+    "Mobile Developer": ["android", "ios", "flutter", "react native", "swift", "kotlin", "mobile app", "xcode"],
+    "Security Engineer": ["security", "cyber", "penetration testing", "ethical hacking", "infosec", "firewall", "cryptography"],
+    "QA Engineer": ["qa", "quality assurance", "testing", "selenium", "cypress", "jest", "pytest", "automation testing"],
+    "UX/UI Designer": ["ux", "ui", "figma", "adobe xd", "sketch", "user experience", "user interface", "wireframing", "prototyping"],
+    "Product/Project Manager": ["product manager", "project manager", "scrum", "agile", "jira", "pmp", "kanban"],
+    "Marketing Specialist": ["marketing", "seo", "sem", "social media", "content strategy", "google analytics", "copywriting", "hubspot"],
+    "Finance Specialist": ["finance", "accounting", "financial modeling", "excel", "valuation", "tax", "audit", "cpa", "cfa"],
+    "HR Specialist": ["hr", "human resources", "recruitment", "talent acquisition", "onboarding", "employee relations"],
+    "Sales Specialist": ["sales", "business development", "b2b", "crm", "salesforce", "lead generation", "account management"],
+    "Legal Specialist": ["legal", "lawyer", "attorney", "paralegal", "contracts", "compliance", "litigation"],
+    "Healthcare Professional": ["doctor", "nurse", "medical", "patient care", "healthcare", "clinical", "pharmacy"],
+    "Educator": ["teacher", "educator", "curriculum", "teaching", "instruction", "tutoring"],
+    "Operations Specialist": ["operations", "supply chain", "logistics", "procurement", "inventory management", "process improvement"]
+}
+
 def load_model():
-    if not os.path.exists(MODEL_PATH) or not os.path.exists(VEC_PATH):
-        print("Model not found. Training now...")
-        return train_model()
+    pass # Deprecated in favor of deterministic scoring for cross-platform stability
 
-    model      = joblib.load(MODEL_PATH)
-    vectorizer = joblib.load(VEC_PATH)
-    print("Model loaded from disk.")
-    return model, vectorizer
-
-
-# ─── PREDICT JOB ROLE ──────────────────────────────────────────────────────────
 def predict_role(parsed_resume: dict) -> dict:
     """
     Input:  parsed resume dict from utils.py
     Output: predicted role + confidence score
+    Uses a robust deterministic keyword matching system.
     """
-    model, vectorizer = load_model()
+    skills = [s.lower() for s in parsed_resume.get("skills", [])]
+    raw_text = parsed_resume.get("raw_text", "").lower()
+    
+    scores = {role: 0 for role in ROLE_KEYWORDS}
+    
+    # 1. Score based on explicit extracted skills (High confidence)
+    for skill in skills:
+        for role, keywords in ROLE_KEYWORDS.items():
+            if skill in keywords:
+                scores[role] += 3
+            elif any(kw in skill for kw in keywords):
+                scores[role] += 1
+                
+    # 2. Score based on raw text keyword mentions (Medium confidence)
+    if raw_text:
+        for role, keywords in ROLE_KEYWORDS.items():
+            for kw in keywords:
+                if kw in raw_text:
+                    scores[role] += 1
+                    
+    # 3. Check for explicit job title mentions using group_role
+    title_guess = group_role(raw_text)
+    if title_guess != "Other":
+        scores[title_guess] += 10 # Massive boost if they literally state the title
+        
+    best_role = max(scores, key=scores.get)
+    
+    if scores[best_role] > 0:
+        # Calculate a pseudo-confidence score
+        total_score = sum(scores.values())
+        conf = round(min(99.0, (scores[best_role] / total_score) * 100 + 20), 1)
+        return {"predicted_role": best_role, "confidence": conf}
 
-    # Build input text same way as training
-    skills    = " ".join(parsed_resume.get("skills", []))
-    education = " ".join(parsed_resume.get("education", []))
-    raw_text  = parsed_resume.get("raw_text", "")
+    return {"predicted_role": "Other", "confidence": 0.0}
 
-    input_text = f"{skills} {education}".strip()
-    if not input_text and raw_text:
-        input_text = raw_text
-
-    # If still empty after parser output, attempt heuristic by role-term matching
-    if not input_text:
-        role_guess = group_role(raw_text or "")
-        if role_guess != "Other":
-            return {"predicted_role": role_guess, "confidence": 30.0}
-        return {"predicted_role": "Unknown", "confidence": 0.0}
-
-    vec    = vectorizer.transform([input_text])
-    role   = model.predict(vec)[0]
-    proba  = model.predict_proba(vec)[0]
-    conf   = round(float(max(proba)) * 100, 1)
-
-    return {
-        "predicted_role": role,
-        "confidence": conf
-    }
-
-
-# ─── RUN DIRECTLY TO TRAIN ─────────────────────────────────────────────────────
 if __name__ == "__main__":
-    train_model()
+    print("Model training deprecated. Using deterministic heuristic engine.")
