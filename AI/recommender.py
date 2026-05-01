@@ -290,11 +290,14 @@ def score_jobs(parsed_resume: dict, jobs: list) -> list:
 
     scored = []
 
-    for job in jobs:
+    # BATCH ENCODE ALL JOBS AT ONCE FOR MASSIVE SPEEDUP
+    job_texts = [build_job_text(job) for job in jobs]
+    all_job_vecs = embedder.encode(job_texts)
+
+    for idx, job in enumerate(jobs):
         try:
             # Semantic similarity
-            job_text  = build_job_text(job)
-            job_vec   = embedder.encode([job_text])
+            job_vec   = [all_job_vecs[idx]]
             sem_score = float(cosine_similarity(resume_vec, job_vec)[0][0])
 
             # Skill overlap bonus (max 0.20)
