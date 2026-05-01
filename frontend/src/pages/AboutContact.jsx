@@ -137,8 +137,8 @@ export default function AboutContact() {
             {[
               { name: "Yashvi Bhadani", role: "Project Lead & AI Engineer", initial: "YB" },
               { name: "Astha", role: "Database & Authentication", initial: "AS" },
-              { name: "Backend Developer", role: "Full Backend & Security", initial: "BD" },
-              { name: "Team Member", role: "Frontend Developer", initial: "FE" },
+              { name: "Manthan chavda", role: "Full Backend & Security", initial: "MC" },
+              { name: "Shivansh Dalvadi", role: "Frontend Developer", initial: "SD" },
             ].map((member, i) => (
               <div key={i} className="flex items-center gap-4 bg-gray-50 rounded-xl p-5 border border-gray-100">
                 <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
