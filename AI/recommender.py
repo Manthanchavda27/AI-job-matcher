@@ -194,23 +194,22 @@ def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str 
     seniority_filter = None
     if years_exp is not None:
         if years_exp <= 1:
-            seniority_filter = ["entry", "entry_level", "junior"]
+            seniority_filter = ["junior"]
         elif years_exp <= 4:
-            seniority_filter = ["mid", "mid_level", "entry_level"]
+            seniority_filter = ["mid_level", "junior"]
         else:
-            seniority_filter = ["senior", "mid_level", "lead"]
+            seniority_filter = ["senior", "staff", "c_level"]
 
     for title in search_titles:
         try:
             payload = {
                 "job_title_or":           [title],
-                "job_location_pattern_or": ["Ahmedabad", "Surat"],
                 "posted_at_max_age_days":  30,
                 "limit": limit_per_title,
             }
 
             if seniority_filter:
-                payload["seniority"] = seniority_filter
+                payload["job_seniority_or"] = seniority_filter
 
             if country_code:
                 payload["job_country_code_or"] = [country_code]
@@ -223,7 +222,7 @@ def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str 
             )
 
             if response.status_code != 200:
-                print(f"TheirStack error for '{title}': {response.status_code}")
+                print(f"TheirStack error for '{title}': {response.status_code} {response.text[:500]}")
                 continue
 
             jobs = response.json().get("data", [])
@@ -503,6 +502,74 @@ def get_top5_for_upload_page(location_buckets: dict) -> list:
     return priority_list[:5]
 
 
+def build_fallback_jobs(predicted_role: str, parsed_resume: dict) -> list:
+    """
+    Demo fallback used when TheirStack is unavailable, out of credits, or returns no jobs.
+    """
+    try:
+        import pandas as pd
+        dataset_path = os.path.join(os.path.dirname(__file__), "sample_jobs.csv")
+        df = pd.read_csv(dataset_path)
+
+        df_filtered = df[
+            df['Role'].str.contains(predicted_role, case=False, na=False) |
+            df['Job Title'].str.contains(predicted_role, case=False, na=False)
+        ]
+
+        if df_filtered.empty:
+            df_filtered = df.sample(min(15, len(df)))
+        else:
+            df_filtered = df_filtered.sample(min(15, len(df_filtered)))
+
+        raw_jobs = []
+        for _, row in df_filtered.iterrows():
+            comp = str(row.get('Company', 'Tech Company'))
+            job_title = str(row.get('Job Title', predicted_role))
+            skills = [s.strip() for s in str(row.get('skills', '')).split(',')]
+            raw_jobs.append(
+                {
+                    "id": str(row.get('Job Id', f"fallback-{len(raw_jobs)}")),
+                    "job_title": job_title,
+                    "company": comp,
+                    "location": str(row.get('location', 'Remote')),
+                    "short_location": str(row.get('location', 'Remote')),
+                    "country": str(row.get('Country', 'Global')),
+                    "url": f"https://www.linkedin.com/jobs/search/?keywords={job_title.replace(' ', '%20')}%20{comp.replace(' ', '%20')}",
+                    "technology_slugs": skills,
+                    "keyword_slugs": skills,
+                    "description": str(row.get('Job Description', 'This is a dynamically recommended job from our dataset.')),
+                    "seniority": "mid_level",
+                    "remote": False,
+                    "hybrid": False,
+                    "salary_string": str(row.get('Salary Range', '$80,000')),
+                }
+            )
+        return raw_jobs
+    except Exception as e:
+        print(f"Dataset fallback failed: {e}")
+        raw_jobs = []
+        for i in range(15):
+            raw_jobs.append(
+                {
+                    "id": f"fallback-{i}",
+                    "job_title": f"{predicted_role}",
+                    "company": "Decent Company",
+                    "location": "Remote",
+                    "short_location": "Remote",
+                    "country": "Global",
+                    "url": f"https://www.linkedin.com/jobs/search/?keywords={predicted_role.replace(' ', '%20')}",
+                    "technology_slugs": parsed_resume.get("skills", []),
+                    "keyword_slugs": parsed_resume.get("skills", []),
+                    "description": "This is a fallback job.",
+                    "seniority": "mid_level",
+                    "remote": True,
+                    "hybrid": False,
+                    "salary_string": "$60,000",
+                }
+            )
+        return raw_jobs
+
+
 # ─── MAIN FUNCTION ────────────────────────────────────────────────────────────
 def get_recommendations(parsed_resume: dict) -> dict:
     """
@@ -560,77 +627,8 @@ def get_recommendations(parsed_resume: dict) -> dict:
         raw_jobs = fetch_jobs(search_titles, limit_per_title=4, country_code=candidate_country_code, years_exp=None)
 
     if not raw_jobs:
-        # if API key is missing/invalid, fallback to synthetic job list
-        if not THEIRSTACK_KEY:
-            try:
-                import pandas as pd
-                dataset_path = os.path.join(os.path.dirname(__file__), "sample_jobs.csv")
-                df = pd.read_csv(dataset_path)
-                
-                # Simple heuristic search in Role or Job Title
-                df_filtered = df[df['Role'].str.contains(predicted_role, case=False, na=False) | df['Job Title'].str.contains(predicted_role, case=False, na=False)]
-                
-                # If no direct matches, just sample random jobs or fallback
-                if df_filtered.empty:
-                    df_filtered = df.sample(min(15, len(df)))
-                else:
-                    df_filtered = df_filtered.sample(min(15, len(df_filtered)))
-                
-                raw_jobs = []
-                for _, row in df_filtered.iterrows():
-                    comp = str(row.get('Company', 'Tech Company'))
-                    job_title = str(row.get('Job Title', predicted_role))
-                    skills = [s.strip() for s in str(row.get('skills', '')).split(',')]
-                    raw_jobs.append(
-                        {
-                            "id": str(row.get('Job Id', f"fallback-{len(raw_jobs)}")),
-                            "job_title": job_title,
-                            "company": comp,
-                            "location": str(row.get('location', 'Remote')),
-                            "short_location": str(row.get('location', 'Remote')),
-                            "country": str(row.get('Country', 'Global')),
-                            "url": f"https://www.linkedin.com/jobs/search/?keywords={job_title.replace(' ', '%20')}%20{comp.replace(' ', '%20')}",
-                            "technology_slugs": skills,
-                            "keyword_slugs": skills,
-                            "description": str(row.get('Job Description', 'This is a dynamically recommended job from our dataset.')),
-                            "seniority": "Mid",
-                            "remote": False,
-                            "hybrid": False,
-                            "salary_string": str(row.get('Salary Range', '$80,000')),
-                        }
-                    )
-            except Exception as e:
-                print(f"Dataset fallback failed: {e}")
-                raw_jobs = []
-                for i in range(15):
-                    raw_jobs.append(
-                        {
-                            "id": f"fallback-{i}",
-                            "job_title": f"{predicted_role}",
-                            "company": "Decent Company",
-                            "location": "Remote",
-                            "short_location": "Remote",
-                            "country": "Global",
-                            "url": f"https://www.linkedin.com/jobs/search/?keywords={predicted_role.replace(' ', '%20')}",
-                            "technology_slugs": parsed_resume.get("skills", []),
-                            "keyword_slugs": parsed_resume.get("skills", []),
-                            "description": "This is a fallback job.",
-                            "seniority": "Mid",
-                            "remote": True,
-                            "hybrid": False,
-                            "salary_string": "$60,000",
-                        }
-                    )
-        else:
-            return {
-                "predicted_role": predicted_role,
-                "confidence":     confidence,
-                "total_found":    0,
-                "top5":           [],
-                "all_jobs":       [],
-                "by_location":    {"local": [], "country": [], "global": []},
-                "message":        "No jobs found. Try again later."
-            }
+        print("No live jobs found. Using local demo fallback jobs.")
+        raw_jobs = build_fallback_jobs(predicted_role, parsed_resume)
 
     # Step 4 — score all jobs
     scored_jobs = score_jobs(parsed_resume, raw_jobs)
